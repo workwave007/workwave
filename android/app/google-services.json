@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "524639512009",
+    "project_id": "jobapplyhub-74003",
+    "storage_bucket": "jobapplyhub-74003.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:524639512009:android:02324dccd25bfc8d37f418",
+        "android_client_info": {
+          "package_name": "com.jobapplyhub.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "524639512009-1fdukvo7cvi83mij29ssggbk8ibv9trt.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.jobapplyhub.app",
+            "certificate_hash": "f4dcfacb57118ca4ce5a942c77c2ca6598d899f5"
+          }
+        },
+        {
+          "client_id": "524639512009-gr2t3ad4jgkvpne1k70lgf5k6f0esifk.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCk1_Yi1_n17EBt-cJ-t2kB_ei4VH5Oc1Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "524639512009-gr2t3ad4jgkvpne1k70lgf5k6f0esifk.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
