@@ -7,6 +7,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:reorderable_grid_view/reorderable_grid_view.dart';
 
 class ImageToPDFPage extends StatefulWidget {
+  const ImageToPDFPage({super.key});
+
   @override
   _ImageToPDFPageState createState() => _ImageToPDFPageState();
 }
@@ -14,23 +16,21 @@ class ImageToPDFPage extends StatefulWidget {
 class _ImageToPDFPageState extends State<ImageToPDFPage> {
   final ImagePicker _picker = ImagePicker();
   File? _pdfFile;
-  List<File> _images = [];
+  final List<File> _images = [];
 
   // Pick multiple images
   void _pickImages() async {
     final pickedFiles = await _picker.pickMultiImage();
-    if (pickedFiles != null) {
-      setState(() {
-        _images.addAll(pickedFiles.map((file) => File(file.path)));
-      });
+    setState(() {
+      _images.addAll(pickedFiles.map((file) => File(file.path)));
+    });
     }
-  }
 
   // Convert images to PDF
   void _convertToPDF() async {
     if (_images.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Please select at least one image.")),
+        const SnackBar(content: Text("Please select at least one image.")),
       );
       return;
     }
@@ -39,7 +39,7 @@ class _ImageToPDFPageState extends State<ImageToPDFPage> {
     String? appName = await _showNameDialog();
     if (appName == null || appName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Please provide a valid name.")),
+        const SnackBar(content: Text("Please provide a valid name.")),
       );
       return;
     }
@@ -85,23 +85,23 @@ class _ImageToPDFPageState extends State<ImageToPDFPage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text("Enter a name for your PDF"),
+          title: const Text("Enter a name for your PDF"),
           content: TextField(
             controller: nameController,
-            decoration: InputDecoration(hintText: "Enter name"),
+            decoration: const InputDecoration(hintText: "Enter name"),
           ),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
               },
-              child: Text("Cancel"),
+              child: const Text("Cancel"),
             ),
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context, nameController.text);
               },
-              child: Text("OK"),
+              child: const Text("OK"),
             ),
           ],
         );
@@ -119,13 +119,13 @@ class _ImageToPDFPageState extends State<ImageToPDFPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Image to PDF Converter")),
+      appBar: AppBar(title: const Text("Image to PDF Converter")),
       body: Column(
         children: [
           // Display images in a reorderable grid with delete functionality and indices
           Expanded(
             child: ReorderableGridView.builder(
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
@@ -148,14 +148,14 @@ class _ImageToPDFPageState extends State<ImageToPDFPage> {
                         top: 5,
                         left: 5,
                         child: Container(
-                          padding: EdgeInsets.all(5),
+                          padding: const EdgeInsets.all(5),
                           decoration: BoxDecoration(
                             color: Colors.black54,
                             borderRadius: BorderRadius.circular(5),
                           ),
                           child: Text(
                             "${index + 1}",
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
                             ),
@@ -167,7 +167,7 @@ class _ImageToPDFPageState extends State<ImageToPDFPage> {
                         top: 5,
                         right: 5,
                         child: IconButton(
-                          icon: Icon(Icons.delete, color: Colors.red),
+                          icon: const Icon(Icons.delete, color: Colors.red),
                           onPressed: () => _deleteImage(index),
                         ),
                       ),
@@ -185,11 +185,11 @@ class _ImageToPDFPageState extends State<ImageToPDFPage> {
           ),
           ElevatedButton(
             onPressed: _pickImages,
-            child: Text("Pick Images"),
+            child: const Text("Pick Images"),
           ),
           ElevatedButton(
             onPressed: _convertToPDF,
-            child: Text("Convert to PDF"),
+            child: const Text("Convert to PDF"),
           ),
         ],
       ),
@@ -201,7 +201,7 @@ class PDFViewPage extends StatelessWidget {
   final File pdfFile;
   final String appName;
 
-  PDFViewPage({required this.pdfFile, required this.appName});
+  const PDFViewPage({super.key, required this.pdfFile, required this.appName});
 
   @override
   Widget build(BuildContext context) {
@@ -213,14 +213,14 @@ class PDFViewPage extends StatelessWidget {
           children: [
             Text("PDF: $appName"),
             IconButton(
-              icon: Icon(Icons.picture_as_pdf, size: 50),
+              icon: const Icon(Icons.picture_as_pdf, size: 50),
               onPressed: () {
                 OpenFilex.open(pdfFile.path);
               },
             ),
             ElevatedButton(
             onPressed: (){OpenFilex.open(pdfFile.path);},
-            child: Text("Open Pdf"),
+            child: const Text("Open Pdf"),
           ),
 
           ],

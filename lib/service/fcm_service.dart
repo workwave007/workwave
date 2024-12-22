@@ -1,190 +1,146 @@
-import 'dart:convert';
+import 'dart:io';
+import 'dart:math';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:app_settings/app_settings.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:job_apply_hub/Screens/splash_screen.dart';
+import 'package:job_apply_hub/widgets/global_navigator_key.dart';
 
-class FCMService {
-  static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
-  static final FlutterLocalNotificationsPlugin _localNotifications =
-      FlutterLocalNotificationsPlugin();
-  static final GoogleSignIn _googleSignIn = GoogleSignIn();
-  
+class FcmService {
+  FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =FlutterLocalNotificationsPlugin();
 
-  /// Saves the FCM token to Firestore
-  static Future<void> saveTokenToFirestore(String userId, String? token) async {
-    if (token == null) return;
+  void requestNotificationPermission()async{
 
+    NotificationSettings settings = await _messaging.requestPermission(
+      alert: true,
+      announcement: true,
+      badge: true,
+      carPlay: true,
+      criticalAlert: true,
+      provisional: true,
+      sound: true
+    );
+
+    if(settings.authorizationStatus == AuthorizationStatus.authorized ){
+      print('User Granted Permission');
+    }else if(settings.authorizationStatus == AuthorizationStatus.provisional){
+
+    }else{
+
+      AppSettings.openAppSettings(type: AppSettingsType.notification);
+    }
+  }
+/// Subscribes the device to topics like 'news' and 'job'
+   Future<void> subscribeToTopics() async {
     try {
-      // Reference the user's document in Firestore
-      final userDoc = FirebaseFirestore.instance.collection('users').doc(userId);
-
-      // Set the FCM token with merge: true to prevent overwriting existing data
-      await userDoc.set({'fcmToken': token}, SetOptions(merge: true));
-
-      print("FCM Token saved to Firestore for user: $userId");
+      await _messaging.subscribeToTopic('news');
+      await _messaging.subscribeToTopic('job');
+      print("Subscribed to 'news' and 'job' topics successfully.");
     } catch (e) {
-      print("Error saving FCM Token to Firestore: $e");
+      print("Error subscribing to topics: $e");
     }
   }
 
-  /// Initializes Firebase Cloud Messaging and saves token
-  static Future<void> initialize(BuildContext context) async {
-    // Request notification permissions
-    await _requestPermission();
+ void initLocalNotification(BuildContext context,RemoteMessage message)async{
+  var androidInitializationSettings =AndroidInitializationSettings('@mipmap/ic_launcher');
+    var initializationSettings = InitializationSettings(
+    android: androidInitializationSettings
+    );
 
-    // Initialize local notifications
-    await _initializeLocalNotifications(context);
-
-    // Get the current user ID from Firebase Authentication
-    User? user = FirebaseAuth.instance.currentUser;
-
-    if (user == null) {
-      print("No user signed in");
-      return;
+    await _flutterLocalNotificationsPlugin.initialize(initializationSettings,
+    onDidReceiveNotificationResponse: (payload){
+       
     }
+    );
+ }
 
-    // Get the FCM Token
-    String? token = await _messaging.getToken();
-    print("FCM Token: $token");
+  void firebaseInit(BuildContext context) async{
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      handleMessage(context, message);
+    });
 
-    // Save the FCM token to Firestore
-    await saveTokenToFirestore(user.uid, token);
+    // Handle initial notification when the app is launched from a terminated state
+    RemoteMessage? initialMessage = await _messaging.getInitialMessage();
+    if (initialMessage != null) {
+      handleMessage(context, initialMessage);
+    }
+    FirebaseMessaging.onMessage.listen((message) {
 
-    // Listen for token refresh and update it in Firestore
-    _messaging.onTokenRefresh.listen((newToken) async {
-      print("New FCM Token: $newToken");
-      await saveTokenToFirestore(user.uid, newToken);
+      if (Platform.isAndroid) {
+        initLocalNotification(context, message);
+        showNotification(message);
+      }
+    });
+  } 
+
+  Future<void> showNotification(RemoteMessage message)async{
+  await createNotificationChannel();
+AndroidNotificationChannel channel = AndroidNotificationChannel(
+  'high_importance_channel',
+  'High Importance Channel',
+  importance: Importance.max,
+
+   
+   );
+AndroidNotificationDetails androidNotificationDetails = AndroidNotificationDetails(
+  channel.id,
+   channel.name.toString(),
+   channelDescription: 'your channel description',
+   importance: Importance.high,
+   priority: Priority.high,
+   ticker: 'ticker'
+   );
+
+   NotificationDetails notificationDetails = NotificationDetails(
+    android: androidNotificationDetails
+   );
+   Future.delayed(Duration.zero,(){_flutterLocalNotificationsPlugin.show(
+    0,
+    message.notification!.title.toString(),
+    message.notification!.body.toString(),
+    notificationDetails);
     });
   }
 
-  /// Pre-creates the user document in Firestore if it doesn't exist
-  static Future<void> createUserDocument(String userId, String email) async {
-    final userDoc = FirebaseFirestore.instance.collection('users').doc(userId);
+ Future<String> getDeviceToken()async{
+  String? token  = await  _messaging.getToken();
+  return token!;
+ }
+  
+  void handleMessage(BuildContext context,RemoteMessage message){
+final String? notificationType = message.data['type'];
+    _navigateToSplashScreen(context, notificationType);
 
-    try {
-      await userDoc.set({
-        'email': email,
-        'fcmToken': null, // Will be updated later
-        'createdAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true)); // Ensures no overwriting if the doc exists
-
-      print("User document created/updated for user: $userId");
-    } catch (e) {
-      print("Error creating user document: $e");
-    }
   }
 
-  /// Requests notification permissions from the user
-  static Future<void> _requestPermission() async {
-    NotificationSettings settings = await _messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      print("User granted notification permissions.");
-    } else {
-      print("User declined notification permissions.");
-    }
+  static void _navigateToSplashScreen(BuildContext context, String? notificationType) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      navigatorKey.currentState?.pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => SplashScreen(notificationType: notificationType),
+        ),
+      );
+    });
   }
 
-  /// Initializes local notifications
-  /// Initializes local notifications
-static Future<void> _initializeLocalNotifications(BuildContext context) async {
-  const AndroidInitializationSettings androidSettings =
-      AndroidInitializationSettings('@mipmap/ic_launcher');
 
-  const InitializationSettings settings = InitializationSettings(
-    android: androidSettings,
-  );
-
-  await _localNotifications.initialize(
-    settings,
-    onDidReceiveNotificationResponse: (NotificationResponse response) {
-      // Parse the payload (custom data sent with the notification)
-      if (response.payload != null) {
-        final Map<String, dynamic> payloadData = _parsePayload(response.payload!);
-
-        // Check the notification type and handle redirection
-        final String? type = payloadData['type'];
-        if (type == 'job') {
-          print("Redirecting to Job page.");
-          // Navigate to Job Page
-          // _navigateToJobPage(context);
-          
-        } else if (type == 'news') {
-          print("Redirecting to News page.");
-          // Navigate to News Page
-          _navigateToNewsPage(context);
-        } else {
-          print("Unknown notification type: $type");
-          // Handle other types or fallback
-          _navigateToDefaultPage(context);
-        }
-      } else {
-        print("Notification clicked with no payload.");
-      }
-    },
-  );
-}
-
-/// Parse the payload into a Map
-static Map<String, dynamic> _parsePayload(String payload) {
-  try {
-    return Map<String, dynamic>.from(jsonDecode(payload));
-  } catch (e) {
-    print("Error parsing payload: $e");
-    return {};
-  }
-}
-
-/// Navigate to Job Page
-static void _navigateToJobPage(BuildContext context) {
-  // Example: Add your navigation logic here
-   Navigator.pushNamed(context, '/jobPortal');
-  print("Navigating to Job Page...");
-}
-
-/// Navigate to News Page
-static void _navigateToNewsPage(BuildContext context) {
-  // Example: Add your navigation logic here
-   Navigator.pushNamed(context, '/newsPage');
-  print("Navigating to News Page...");
-}
-
-/// Navigate to Default Page
-static void _navigateToDefaultPage(BuildContext context) {
-  // Example: Add your fallback navigation logic here
-   Navigator.pushNamed(context, '/home');
-  print("Navigating to Default Page...");
-}
-
-
-  /// Shows a local notification
-  static Future<void> _showNotification(String? title, String? body) async {
-    const AndroidNotificationDetails androidDetails =
-        AndroidNotificationDetails(
-      'default_channel',
-      'Default Channel',
-      channelDescription: 'This is the default channel for notifications',
+  Future<void> createNotificationChannel() async {
+  if (Platform.isAndroid) {
+    final AndroidNotificationChannel channel = AndroidNotificationChannel(
+      'high_importance_channel', // This must match the ID defined in the manifest
+      'High Importance Channel',
+      description: 'This channel is used for important notifications.',
       importance: Importance.high,
-      priority: Priority.high,
     );
 
-    const NotificationDetails details = NotificationDetails(
-      android: androidDetails,
-    );
-
-    await _localNotifications.show(
-      0, // Notification ID
-      title,
-      body,
-      details,
-    );
+    // Register the channel with the system
+    await _flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(channel);
   }
+}
+
 }

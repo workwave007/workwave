@@ -3,6 +3,8 @@ import 'package:webview_flutter/webview_flutter.dart';
 
 
 class HtmlStringLoader extends StatefulWidget {
+  const HtmlStringLoader({super.key});
+
   @override
   _HtmlStringLoaderState createState() => _HtmlStringLoaderState();
 }
@@ -279,7 +281,7 @@ class _HtmlStringLoaderState extends State<HtmlStringLoader> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('HTML String Loader'),
+        title: const Text('HTML String Loader'),
       ),
       body: WebViewWidget(controller: _controller),
     );

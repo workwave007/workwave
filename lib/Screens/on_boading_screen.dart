@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 
 class OnboardingScreen extends StatefulWidget {
+  const OnboardingScreen({super.key});
+
   @override
   _OnboardingScreenState createState() => _OnboardingScreenState();
 }
@@ -21,16 +23,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       'description': 'Get the latest tech news in one place.',
       'animation': 'assets/onboarding/news_animation.json',
     },
-    {
-      'title': 'Join the Community',
-      'description': 'Connect, learn, and grow with like-minded professionals.',
-      'animation': 'assets/onboarding/community_animation.json',
-    },
   ];
 
   void _nextPage() {
     if (_currentIndex < _onboardingData.length - 1) {
-      _pageController.nextPage(duration: Duration(milliseconds: 300), curve: Curves.easeInOut);
+      _pageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
     } else {
       Navigator.pushReplacementNamed(context, '/login'); // Navigate to login screen
     }
@@ -62,17 +59,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         height: 300,
                         fit: BoxFit.contain,
                       ),
-                      SizedBox(height: 30),
+                      const SizedBox(height: 30),
                       Text(
                         _onboardingData[index]['title']!,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                           color: Colors.deepPurple,
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      SizedBox(height: 20),
+                      const SizedBox(height: 20),
                       Text(
                         _onboardingData[index]['description']!,
                         style: TextStyle(
@@ -96,17 +93,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   TextButton(
                     onPressed: () {
                       _pageController.previousPage(
-                        duration: Duration(milliseconds: 300),
+                        duration: const Duration(milliseconds: 300),
                         curve: Curves.easeInOut,
                       );
                     },
-                    child: Text(
+                    child: const Text(
                       'Back',
                       style: TextStyle(color: Colors.deepPurple),
                     ),
                   )
                 else
-                  SizedBox.shrink(),
+                  const SizedBox.shrink(),
                 ElevatedButton(
                   onPressed: _nextPage,
                   style: ElevatedButton.styleFrom(
@@ -115,7 +112,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  child: Text(_currentIndex == _onboardingData.length - 1 ? 'Get Started' : 'Next',style: TextStyle(color: Colors.white),),
+                  child: Text(_currentIndex == _onboardingData.length - 1 ? 'Get Started' : 'Next',style: const TextStyle(color: Colors.white),),
                 ),
               ],
             ),

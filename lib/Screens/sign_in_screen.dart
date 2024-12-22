@@ -5,6 +5,8 @@ import 'package:lottie/lottie.dart';
 import 'package:job_apply_hub/widgets/google_signIn_Button.dart';
 
 class SignInScreen extends StatefulWidget {
+  const SignInScreen({super.key});
+
   @override
   _SignInScreenState createState() => _SignInScreenState();
 }
@@ -43,7 +45,7 @@ class _SignInScreenState extends State<SignInScreen> {
       }
     } catch (e) {
       print("Error signing in with Google: $e");
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Sign-in failed!')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sign-in failed!')));
     } finally {
       setState(() {
         _isLoading = false; // Hide loading indicator
@@ -68,10 +70,10 @@ class _SignInScreenState extends State<SignInScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Heading
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24.0),
                 child: Text(
-                  "Login Page",
+                  "Login",
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 32,
@@ -80,11 +82,11 @@ class _SignInScreenState extends State<SignInScreen> {
                   ),
                 ),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
               // Motivating Text
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24.0),
                 child: Text("Take the first step toward your dream job! Let's get you started!",
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -94,7 +96,7 @@ class _SignInScreenState extends State<SignInScreen> {
                   ),
                 ),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
               // Lottie Animation
               SizedBox(
@@ -104,7 +106,7 @@ class _SignInScreenState extends State<SignInScreen> {
                   fit: BoxFit.contain,
                 ),
               ),
-              SizedBox(height: 40),
+              const SizedBox(height: 40),
 
               // Google Sign-In Button
               Padding(
@@ -120,7 +122,7 @@ class _SignInScreenState extends State<SignInScreen> {
           if (_isLoading)
             Container(
               color: Colors.black.withOpacity(0.5), // Transparent overlay
-              child: Center(
+              child: const Center(
                 child: CircularProgressIndicator(),
               ),
             ),

@@ -1,65 +1,56 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:easy_url_launcher/easy_url_launcher.dart';
-import 'package:job_apply_hub/temp.dart';
+import 'package:job_apply_hub/Screens/Sections/TechNews/savedTechNews.dart';
+import 'package:job_apply_hub/Screens/ads/nativeAdWidget.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shimmer/shimmer.dart';
 
 class TechNewsSection extends StatefulWidget {
+  const TechNewsSection({super.key});
+
   @override
   _TechNewsSectionState createState() => _TechNewsSectionState();
 }
-
 class _TechNewsSectionState extends State<TechNewsSection> {
-  late NativeAd _nativeAd;
-  bool _isNativeAdLoaded = false;
-
   @override
   void initState() {
     super.initState();
-    MobileAds.instance.initialize();
-    _loadNativeAd();
-  }
-
-  void _loadNativeAd() {
-    _nativeAd = NativeAd(
-      adUnitId: 'ca-app-pub-3940256099942544/2247696110', // Replace with your Native Ad Unit ID
-      request: AdRequest(),
-      nativeTemplateStyle: NativeTemplateStyle(templateType: TemplateType.medium),
-      listener: NativeAdListener(
-        onAdLoaded: (ad) {
-          setState(() {
-            _isNativeAdLoaded = true;
-          });
-        },
-        onAdFailedToLoad: (ad, error) {
-          ad.dispose();
-          debugPrint('Failed to load native ad: $error');
-        },
-      ),
-    )..load();
   }
 
   @override
   void dispose() {
-    _nativeAd.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
+        backgroundColor: Colors.red[100],
         title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Icon(Icons.article, size: 30),
-            SizedBox(width: 10),
-            Text(
-              'Tech News',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 24,
-              ),
+            const Text(
+              'Job Portal',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black),
+            ),
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.bookmark_border, color: Colors.black),
+                  onPressed: () {
+                     Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => BookmarkedNewsScreen()),
+        );
+                  },
+                ),
+              ],
             ),
           ],
         ),
@@ -78,11 +69,11 @@ class _TechNewsSectionState extends State<TechNewsSection> {
                 }
 
                 if (snapshot.hasError) {
-                  return Center(child: Text('Error loading news.'));
+                  return const Center(child: Text('Error loading news.'));
                 }
 
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return Center(child: Text('No news available.'));
+                  return const Center(child: Text('No news available.'));
                 }
 
                 final newsList = snapshot.data!.docs.map((doc) {
@@ -97,27 +88,19 @@ class _TechNewsSectionState extends State<TechNewsSection> {
                 }).toList();
 
                 return PageView.builder(
+                  controller: PageController(viewportFraction: 1, initialPage: 0),
                   scrollDirection: Axis.vertical,
-                  itemCount: newsList.length + (newsList.length ~/ 3),
-                  controller: PageController(viewportFraction: 0.8, initialPage: 0),
+                  itemCount: newsList.length * 3 - 1, // To add space for ads between news items
                   itemBuilder: (context, index) {
-                    if ((index + 1) % 4 == 0 && _isNativeAdLoaded) {
-                      // Show Native Ad every 3 items
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        child: Container(
-                          height: 150,
-                          child: AdWidget(ad: _nativeAd),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey, width: 0.5),
-                            borderRadius: BorderRadius.circular(10),
-                            color: Colors.white,
-                          ),
-                        ),
-                      );
+                    // Show ad every 2nd index
+                    if (index%3==2) {
+                      return NativeAdWidget(); // Native ad widget at every 2nd index
                     }
 
-                    final newsIndex = index - (index ~/ 4);
+                    // Normal news card
+                    final newsIndex = index ~/ 3; // Adjust news index based on ad slots
+                    if (newsIndex >= newsList.length) return const SizedBox.shrink();
+
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       child: NewsCard(news: newsList[newsIndex]),
@@ -131,8 +114,10 @@ class _TechNewsSectionState extends State<TechNewsSection> {
       ),
     );
   }
+}
 
-  Widget _buildShimmerLoader() {
+
+Widget _buildShimmerLoader() {
     return ListView.builder(
       itemCount: 6,
       itemBuilder: (context, index) {
@@ -153,19 +138,19 @@ class _TechNewsSectionState extends State<TechNewsSection> {
       },
     );
   }
-}
+
 class NewsCard extends StatelessWidget {
   final News news;
 
-  const NewsCard({Key? key, required this.news}) : super(key: key);
+  const NewsCard({super.key, required this.news});
 
   @override
   Widget build(BuildContext context) {
     final BannerAd bannerAd = BannerAd(
       adUnitId: 'ca-app-pub-3940256099942544/9214589741', // Replace with your Banner Ad Unit ID
       size: AdSize.banner,
-      request: AdRequest(),
-      listener: BannerAdListener(),
+      request: const AdRequest(),
+      listener: const BannerAdListener(),
     )..load();
 
     return Container(
@@ -173,7 +158,7 @@ class NewsCard extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         color: Colors.white,
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
             color: Colors.black26,
             blurRadius: 15,
@@ -185,7 +170,7 @@ class NewsCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.only(
+            borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(20),
               topRight: Radius.circular(20),
             ),
@@ -196,10 +181,10 @@ class NewsCard extends StatelessWidget {
               height: 150,
               loadingBuilder: (context, child, loadingProgress) {
                 if (loadingProgress == null) return child;
-                return Center(child: CircularProgressIndicator());
+                return const Center(child: CircularProgressIndicator());
               },
               errorBuilder: (context, error, stackTrace) {
-                return Center(
+                return const Center(
                   child: Icon(Icons.broken_image, size: 60, color: Colors.grey),
                 );
               },
@@ -210,15 +195,33 @@ class NewsCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  news.title,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        news.title,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                            icon: Icon(
+                              Icons.bookmark_border,
+                              color: Colors.red,
+                            ),
+                            onPressed: () async{
+                     await SavedNewsManager.saveNews(news);
+                           ScaffoldMessenger.of(context).showSnackBar(
+                           const SnackBar(content: Text('News saved to bookmarks')),
+                             );
+                            },
+                          ),
+                  ],
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Text(
                   news.summary,
                   style: TextStyle(
@@ -226,15 +229,15 @@ class NewsCard extends StatelessWidget {
                     color: Colors.grey[700],
                   ),
                 ),
-                SizedBox(height: 12),
+                const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       news.source,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 14,
-                        color: Colors.blueAccent,
+                        color: Colors.redAccent,
                       ),
                     ),
                     ElevatedButton(
@@ -245,12 +248,12 @@ class NewsCard extends StatelessWidget {
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
+                        backgroundColor: Colors.red,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
                         ),
                       ),
-                      child: Text(
+                      child: const Text(
                         'Read More',
                         style: TextStyle(
                           fontSize: 14,
@@ -263,14 +266,52 @@ class NewsCard extends StatelessWidget {
               ],
             ),
           ),
-          // Add the BannerAd at the bottom of the container
+          // Banner Ad
           SizedBox(
-            height: 50, // Fixed height for the banner ad
+            height: 50,
             child: AdWidget(ad: bannerAd),
           ),
         ],
       ),
     );
+  }
+}
+class SavedNewsManager {
+  // Save a news item to shared_preferences
+  static Future<void> saveNews(News news) async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String> savedNewsJson = prefs.getStringList('savedNews') ?? [];
+
+    // Convert news to a Map and then to a JSON string
+    String newsJson = json.encode(news.toMap());
+
+    // Avoid duplicates
+    if (!savedNewsJson.contains(newsJson)) {
+      savedNewsJson.add(newsJson);
+      await prefs.setStringList('savedNews', savedNewsJson);
+    }
+  }
+
+  // Fetch saved news items from shared_preferences
+  static Future<List<News>> fetchSavedNews() async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String> savedNewsJson = prefs.getStringList('savedNews') ?? [];
+
+    return savedNewsJson
+        .map((newsJson) => News.fromMap(json.decode(newsJson)))
+        .toList();
+  }
+
+  // Remove a news item from the saved news list
+  static Future<void> deleteNews(News news) async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String> savedNewsJson = prefs.getStringList('savedNews') ?? [];
+
+    // Remove the news item from the list
+    savedNewsJson.removeWhere((newsJson) => json.encode(news.toMap()) == newsJson);
+
+    // Save the updated list back to shared_preferences
+    await prefs.setStringList('savedNews', savedNewsJson);
   }
 }
 
@@ -291,4 +332,27 @@ class News {
     required this.url,
     required this.postedAt,
   });
+   Map<String, dynamic> toMap() {
+    return {
+      'image': image,
+      'title': title,
+      'summary': summary,
+      'source': source,
+      'url': url,
+      'postedAt': postedAt.toIso8601String(),
+    };
+  }
+
+  // Create from Map
+  factory News.fromMap(Map<String, dynamic> map) {
+    return News(
+      image: map['image'],
+      title: map['title'],
+      summary: map['summary'],
+      source: map['source'],
+      url: map['url'],
+      postedAt: DateTime.parse(map['postedAt']),
+    );
+  }
 }
+
