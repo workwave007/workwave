@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:job_apply_hub/Screens/Sections/AIInterview/ResumeForm.dart';
 import 'package:job_apply_hub/Screens/Sections/HomeSection.dart';
 import 'package:job_apply_hub/Screens/Sections/jobPortal/jobPortalSection.dart';
 import 'package:job_apply_hub/Screens/Sections/TechNews/techNewsSection.dart';
@@ -20,6 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
     const HomeSection(),
     JobScreen(),
     TechNewsSection(),
+    ResumeFormScreen(),
   ];
 
   @override
@@ -51,6 +53,9 @@ class _HomeScreenState extends State<HomeScreen> {
         break;
       case 2:
         backgroundColor = Colors.red[50]!; // Light red for News
+        break;
+        case 3:
+        backgroundColor = Colors.white; // Light red for News
         break;
       default:
         backgroundColor = Colors.white; // Default color
@@ -85,6 +90,11 @@ class _HomeScreenState extends State<HomeScreen> {
               icon: Icon(Icons.newspaper),
               title: Text("News"),
               selectedColor: Colors.red,
+            ),
+            SalomonBottomBarItem(
+              icon: Icon(Icons.rocket),
+              title: Text("AI"),
+              selectedColor: Colors.black,
             ),
           ],
         ),

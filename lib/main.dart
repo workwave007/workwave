@@ -6,6 +6,8 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:job_apply_hub/Screens/Features/ImageToPDF/imgToPdf.dart';
 import 'package:job_apply_hub/Screens/Features/Resume/ResumeHomeScreen.dart';
+import 'package:job_apply_hub/Screens/Features/Resume/resumesample.dart';
+import 'package:job_apply_hub/Screens/Features/salaryCalculator.dart';
 import 'package:job_apply_hub/Screens/Sections/jobPortal/jobPortalSection.dart';
 import 'package:job_apply_hub/Screens/Sections/TechNews/techNewsSection.dart';
 import 'package:job_apply_hub/Screens/homeScreen.dart';
@@ -74,8 +76,9 @@ class _MyAppState extends State<MyApp> {
           '/onboarding': (context) => OnboardingScreen(),
           '/jobPortal': (context) => JobScreen(),
           '/newsSection': (context) => TechNewsSection(),
-          '/resumeBuilder': (context) => HtmlStringLoader(),
+          '/resumeBuilder': (context) => ResumePreviewPage(),
           '/imgToPdf': (context) => ImageToPDFPage(),
+          '/salaryCalc': (context) => SalaryInputScreen(),
         },
       ),
     );

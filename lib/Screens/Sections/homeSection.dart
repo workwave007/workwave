@@ -89,12 +89,13 @@ class _HomeScreenState extends State<HomeSection> {
               child: ListView(
                 children: [
                   FeatureCard(
-                    title: "Resume Builder",
+                    title: "In-Hand Salary Calculator",
                     imageUrl: "https://images.unsplash.com/photo-1673526759327-54f1f5b27322?fm=jpg&q=60&w=3000",
                     onTap: () {
-                      Navigator.pushNamed(context, '/resumeBuilder');
+                      Navigator.pushNamed(context, '/salaryCalc');
                     },
                   ),
+                  
                   FeatureCard(
                     title: "Image to PDF",
                     imageUrl: "https://images.unsplash.com/photo-1673526759327-54f1f5b27322?fm=jpg&q=60&w=3000",
@@ -102,13 +103,7 @@ class _HomeScreenState extends State<HomeSection> {
                       Navigator.pushNamed(context, '/imgToPdf');
                     },
                   ),
-                  FeatureCard(
-                    title: "Compress PDF",
-                    imageUrl: "https://images.unsplash.com/photo-1673526759327-54f1f5b27322?fm=jpg&q=60&w=3000",
-                    onTap: () {
-                      Navigator.pushNamed(context, '/compressPdf');
-                    },
-                  ),
+                  
                 ],
               ),
             ),

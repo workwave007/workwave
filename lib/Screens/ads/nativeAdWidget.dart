@@ -14,7 +14,7 @@ class _NativeAdWidgetState extends State<NativeAdWidget> {
   void initState() {
     super.initState();
     nativeAd = NativeAd(
-      adUnitId: 'ca-app-pub-3940256099942544/2247696110', // Replace with your ad unit ID
+      adUnitId: 'ca-app-pub-6846718920811344/7395723021', // Replace with your ad unit ID
       request: const AdRequest(),
       nativeTemplateStyle: NativeTemplateStyle(templateType: TemplateType.medium),
       listener: NativeAdListener(

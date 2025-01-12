@@ -9,6 +9,8 @@ import 'package:intl/intl.dart';
 import 'package:job_apply_hub/Screens/Sections/jobPortal/jobDetails.dart';
 import 'package:job_apply_hub/Screens/Sections/jobPortal/jobSearch.dart';
 import 'package:job_apply_hub/Screens/Sections/jobPortal/savedJob.dart';
+import 'package:job_apply_hub/Screens/ads/bannerAdWidget.dart';
+import 'package:job_apply_hub/Screens/ads/interstitialAdWidget.dart';
 import 'package:job_apply_hub/Screens/ads/nativeAdWidget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shimmer/shimmer.dart';
@@ -232,7 +234,6 @@ class _JobScreenState extends State<JobScreen> with SingleTickerProviderStateMix
     );
   }
 }
-
 class JobList extends StatefulWidget {
   final String jobTitle;
 
@@ -243,48 +244,99 @@ class JobList extends StatefulWidget {
 }
 
 class _JobListState extends State<JobList> {
+  List<Job> jobs = [];
+  DocumentSnapshot? lastDocument;
+  bool isLoading = false;
+  bool hasMore = true;
+  final int pageSize = 10;
+  late ScrollController _scrollController;
+
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController();
+    _scrollController.addListener(_scrollListener);
+    _fetchJobs();
   }
 
-  Future<List<Job>> _fetchJobs() async {
-    Query query = FirebaseFirestore.instance.collection('jobs');
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchJobs() async {
+    if (isLoading || !hasMore) return;
+
+    setState(() {
+      isLoading = true;
+    });
+
+    Query query = FirebaseFirestore.instance
+        .collection('jobs')
+        .orderBy('postedAt', descending: true)
+        .limit(pageSize);
+
+    if (lastDocument != null) {
+      query = query.startAfterDocument(lastDocument!);
+    }
 
     if (widget.jobTitle != 'All') {
       query = query.where('title', isEqualTo: widget.jobTitle);
     }
 
-    var snapshot = await query.orderBy('postedAt', descending: true).get();
-    return snapshot.docs.map((doc) => Job.fromFirestore(doc)).toList();
+    try {
+      QuerySnapshot snapshot = await query.get();
+
+      if (snapshot.docs.isNotEmpty) {
+        lastDocument = snapshot.docs.last; // Update the last fetched document
+        jobs.addAll(snapshot.docs.map((doc) => Job.fromFirestore(doc)).toList());
+        if (snapshot.docs.length < pageSize) {
+          hasMore = false; // No more jobs to fetch
+        }
+      } else {
+        hasMore = false; // No more jobs to fetch
+      }
+    } catch (error) {
+      print('Error fetching jobs: $error');
+    }
+
+    setState(() {
+      isLoading = false;
+    });
+  }
+
+  void _scrollListener() {
+    if (_scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent - 100 &&
+        hasMore &&
+        !isLoading) {
+      _fetchJobs(); // Fetch the next page of jobs
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<Job>>(
-      future: _fetchJobs(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(color: Colors.blue),
-          );
-        } else if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}'));
-        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Center(child: Text('No jobs available.'));
+    return ListView.builder(
+      controller: _scrollController,
+      itemCount: jobs.length + 1, // Add 1 for the loading indicator
+      itemBuilder: (context, index) {
+        if (index < jobs.length) {
+          if (index % 3 == 2) {
+            return NativeAdWidget(); // Show an ad every third job
+          } else {
+            return JobCard(job: jobs[index]);
+          }
         } else {
-          List<Job> jobs = snapshot.data!;
-          return ListView.builder(
-            itemCount: jobs.length + (jobs.length ~/ 3), // Add extra space for ads
-            itemBuilder: (context, index) {
-              if (index % 3 == 2) { // Show native ad every third index (starting from index 2)
-                return NativeAdWidget(); // Display the native ad
-              } else {
-                // Otherwise display the job card
-                return JobCard(job: jobs[index - (index ~/ 3)]);
-              }
-            },
-          );
+          // Show a loading indicator at the end
+          return hasMore
+              ? const Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Center(
+                    child: CircularProgressIndicator(color: Colors.blue),
+                  ),
+                )
+              : const SizedBox(); // Empty widget if no more jobs
         }
       },
     );
@@ -338,236 +390,252 @@ List<Color> colorScheme = [
   const Color(0xFFE8FFC6), // Light green
   const Color(0xFFFFCDF7), // Light purple
 ];
-class JobCard extends StatelessWidget {
+class JobCard extends StatefulWidget {
   final Job job;
 
-  const JobCard({
-    Key? key,
-    required this.job,
-  }) : super(key: key);
+  const JobCard({Key? key, required this.job}) : super(key: key);
+
+  @override
+  _JobCardState createState() => _JobCardState();
+}
+
+class _JobCardState extends State<JobCard> {
+  late BannerAd _bannerAd;
+  bool _isAdLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _bannerAd = _createBannerAd();
+    Interstitialadwidget.loadInterstitialAd(); // Create the ad when the card is initialized
+  }
+
+  
+
+  // Create BannerAd and pre-load it
+  BannerAd _createBannerAd() {
+    return BannerAd(
+      adUnitId: 'ca-app-pub-6846718920811344/7291118535', // Replace with your Banner Ad Unit ID
+      size: AdSize.banner,
+      request: const AdRequest(),
+      listener: BannerAdListener(
+        onAdLoaded: (_) {
+          setState(() {
+            _isAdLoaded = true; // Mark ad as loaded
+          });
+        },
+        onAdFailedToLoad: (ad, error) {
+          print('Ad failed to load: $error');
+        },
+      ),
+    )..load();
+  }
+
+  @override
+  void dispose() {
+    // Dispose of the ad when the widget is disposed
+    _bannerAd.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width;
 
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => JobDetailsPage(
-              image: job.image,
-              title: job.title,
-              companyInfo: job.companyInfo,
-              jobSummary: job.jobSummary,
-              salary: job.salary,
-              employmentType: job.employmentType,
-              applyLink: job.applyLink,
-              location: job.location,
-              postedAt: job.postedAt,
+    return Padding(
+      padding: EdgeInsets.all(screenWidth * 0.03), // Responsive padding
+      child: Container(
+        margin: EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black26,
+              blurRadius: 15,
+              offset: Offset(0, 5),
             ),
-          ),
-        );
-      },
-      child: Padding(
-        padding: EdgeInsets.all(screenWidth * 0.03), // Responsive padding
-        child: Container(
-          margin: EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black26,
-                blurRadius: 15,
-                offset: Offset(0, 5),
-              ),
-            ],
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Stack(
-                  children: [
-                    ClipRRect(
+          ],
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                    child: Image.network(
+                      widget.job.image,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      height: 150,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Center(child: CircularProgressIndicator());
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return Center(
+                          child: Icon(Icons.broken_image, size: 60, color: Colors.grey),
+                        );
+                      },
+                    ),
+                  ),
+                  Container(
+                    height: 150,
+                    decoration: BoxDecoration(
                       borderRadius: BorderRadius.only(
                         topLeft: Radius.circular(20),
                         topRight: Radius.circular(20),
                       ),
-                      child: Image.network(
-                        job.image,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        height: 150,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return Center(child: CircularProgressIndicator());
-                        },
-                        errorBuilder: (context, error, stackTrace) {
-                          return Center(
-                            child: Icon(Icons.broken_image,
-                                size: 60, color: Colors.grey),
-                          );
-                        },
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.black.withOpacity(0.5),
+                          Colors.transparent,
+                        ],
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
                       ),
                     ),
-                    Container(
-                      height: 150,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(20),
-                          topRight: Radius.circular(20),
+                  ),
+                  Positioned(
+                    bottom: 10,
+                    left: 10,
+                    child: Text(
+                      widget.job.title,
+                      style: TextStyle(
+                        fontSize: screenWidth * 0.05,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              Padding(
+                padding: EdgeInsets.all(screenWidth * 0.04),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            widget.job.companyInfo,
+                            style: TextStyle(
+                              fontSize: screenWidth * 0.045,
+                              color: Colors.deepPurple,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.black.withOpacity(0.5),
-                            Colors.transparent
+                        IconButton(
+                          icon: Icon(Icons.bookmark_border, color: Colors.deepPurple),
+                          onPressed: () async {
+                            await SavedJobsManager.saveJob(widget.job);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Job saved to bookmarks')),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: screenWidth * 0.03),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildInfoBadge(
+                          icon: Icons.currency_rupee,
+                          text: widget.job.salary,
+                          color: Colors.green,
+                          screenWidth: screenWidth,
+                        ),
+                        _buildInfoBadge(
+                          icon: Icons.location_on,
+                          text: widget.job.location,
+                          color: Colors.blue,
+                          screenWidth: screenWidth,
+                        ),
+                        _buildInfoBadge(
+                          icon: Icons.work,
+                          text: widget.job.employmentType,
+                          color: Colors.purple,
+                          screenWidth: screenWidth,
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: screenWidth * 0.03),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.access_time, size: screenWidth * 0.04, color: Colors.grey),
+                            SizedBox(width: 5),
+                            Text(
+                              widget.job.formattedPostedAt(),
+                              style: TextStyle(
+                                fontSize: screenWidth * 0.035,
+                                color: Colors.grey,
+                              ),
+                            ),
                           ],
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
                         ),
-                      ),
+                      ],
                     ),
-                    Positioned(
-                      bottom: 10,
-                      left: 10,
-                      child: Text(
-                        job.title,
-                        style: TextStyle(
-                          fontSize: screenWidth * 0.05, // Responsive font size
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.black,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                          ),
+                          onPressed: () async {
+
+                            Interstitialadwidget.showInterstitialAd();
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => JobDetailsPage(
+                                  image: widget.job.image,
+                                  title: widget.job.title,
+                                  companyInfo: widget.job.companyInfo,
+                                  jobSummary: widget.job.jobSummary,
+                                  salary: widget.job.salary,
+                                  employmentType: widget.job.employmentType,
+                                  applyLink: widget.job.applyLink,
+                                  location: widget.job.location,
+                                  postedAt: widget.job.postedAt,
+                                ),
+                              ),
+                            );
+                          },
+                          child: Text('Apply Now', style: TextStyle(color: Colors.white, fontSize: screenWidth * 0.04)),
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis, // Prevent overflow
-                      ),
+                      ],
                     ),
+                    BannerAdWidget(),
                   ],
                 ),
-                Padding(
-                  padding: EdgeInsets.all(screenWidth * 0.04),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              job.companyInfo,
-                              style: TextStyle(
-                                fontSize: screenWidth * 0.045,
-                                color: Colors.deepPurple,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          IconButton(
-                            icon: Icon(
-                              Icons.bookmark_border,
-                              color: Colors.deepPurple,
-                            ),
-                            onPressed: () async{
-                              await SavedJobsManager.saveJob(job);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Job saved to bookmarks')),
-                        );
-                            },
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: screenWidth * 0.03),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _buildInfoBadge(
-                            icon: Icons.currency_rupee,
-                            text: job.salary,
-                            color: Colors.green,
-                            screenWidth: screenWidth,
-                          ),
-                          _buildInfoBadge(
-                            icon: Icons.location_on,
-                            text: job.location,
-                            color: Colors.blue,
-                            screenWidth: screenWidth,
-                          ),
-                          _buildInfoBadge(
-                            icon: Icons.work,
-                            text: job.employmentType,
-                            color: Colors.purple,
-                            screenWidth: screenWidth,
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: screenWidth * 0.03),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.access_time,
-                                  size: screenWidth * 0.04, color: Colors.grey),
-                              SizedBox(width: 5),
-                              Text(
-                                job.formattedPostedAt(),
-                                style: TextStyle(
-                                  fontSize: screenWidth * 0.035,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.black,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                            ),
-                            onPressed: () async {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => JobDetailsPage(
-                                    image: job.image,
-                                    title: job.title,
-                                    companyInfo: job.companyInfo,
-                                    jobSummary: job.jobSummary,
-                                    salary: job.salary,
-                                    employmentType: job.employmentType,
-                                    applyLink: job.applyLink,
-                                    location: job.location,
-                                    postedAt: job.postedAt,
-                                  ),
-                                ),
-                              );
-                            },
-                            child: Text('Apply Now',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: screenWidth * 0.04)),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
+
 Widget _buildInfoBadge({
   required IconData icon,
   required String text,
